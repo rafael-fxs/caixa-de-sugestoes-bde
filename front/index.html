@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caixa de Sugestões</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Caixa de Sugestões</h1>
+
+        <div class="d-flex justify-content-center mt-4">
+            <button class="btn btn-primary mx-2" onclick="listarSugestoes()">Listar Todas Sugestões</button>
+            <button class="btn btn-success mx-2" onclick="listarTop3()">Top 3 Mais Curtidas</button>
+            <button class="btn btn-secondary mx-2" data-bs-toggle="modal" data-bs-target="#modalCadastrar">Cadastrar Sugestão</button>
+        </div>
+
+        <div id="paginaAtual" class="text-center mt-3">Página: Listar Todas Sugestões</div>
+        <div id="sugestoes" class="mt-4"></div>
+    </div>
+
+    <div class="modal fade" id="modalCadastrar" tabindex="-1" aria-labelledby="modalCadastrarLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCadastrarLabel">Cadastrar Sugestão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formCadastrarSugestao">
+                        <div class="mb-3">
+                            <label for="descricao" class="form-label">Descrição</label>
+                            <input type="text" class="form-control" id="descricao" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="categoria" class="form-label">Categoria</label>
+                            <input type="text" class="form-control" id="categoria" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="usuarioId" class="form-label">Usuário ID</label>
+                            <input type="number" class="form-control" id="usuarioId" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enviar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalCurtir" tabindex="-1" aria-labelledby="modalCurtirLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCurtirLabel">Curtir Sugestão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formCurtirSugestao">
+                        <div class="mb-3">
+                            <label for="usuarioIdCurtir" class="form-label">Usuário ID</label>
+                            <input type="number" class="form-control" id="usuarioIdCurtir" required>
+                        </div>
+                        <input type="hidden" id="sugestaoIdCurtir">
+                        <button type="submit" class="btn btn-success" data-bs-dismiss="modal">Curtir</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalConfirmarApagar" tabindex="-1" aria-labelledby="modalConfirmarApagarLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalConfirmarApagarLabel">Confirmar Exclusão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja apagar esta sugestão?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarApagar" data-bs-dismiss="modal">Apagar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="position-fixed bottom-0 end-0 p-3">
+        <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong id="toastTitle" class="me-auto"></strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toastMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        const apiUrl = 'http://localhost:8080/api/sugestoes';
+
+        function atualizarPaginaAtual(texto) {
+            document.getElementById('paginaAtual').innerText = 'Página: ' + texto;
+        }
+
+        function showToast(title, message, type) {
+            const toastTitle = document.getElementById('toastTitle');
+            const toastMessage = document.getElementById('toastMessage');
+            toastTitle.innerText = title;
+            toastMessage.innerText = message;
+
+            const toastEl = new bootstrap.Toast(document.getElementById('toast'));
+            const toastDiv = document.getElementById('toast');
+
+            toastDiv.classList.remove('bg-success', 'bg-danger');
+            toastDiv.classList.add(type === 'success' ? 'bg-success' : 'bg-danger');
+            toastEl.show();
+        }
+
+        function renderizarSugestoes(sugestoes) {
+            const sugestoesHTML = sugestoes.map(sugestao => `
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">${sugestao.descricao}</h5>
+                        <p class="card-text">Categoria: ${sugestao.categoria}</p>
+                        <p class="card-text">Data Envio: ${new Date(sugestao.dataEnvio).toLocaleDateString('pt-BR')}</p>
+                        <p class="card-text">Usuário: ${sugestao.usuario.nome}</p>
+                        <p class="card-text">Curtidas: ${sugestao.totalCurtidas}</p>
+                        <button class="btn btn-primary" onclick="abrirModalCurtir(${sugestao.id})">Curtir</button>
+                        <button class="btn btn-danger" onclick="abrirModalConfirmarApagar(${sugestao.id})">Apagar</button>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('sugestoes').innerHTML = sugestoesHTML;
+        }
+
+        function listarSugestoes() {
+            axios.get(apiUrl)
+                .then(response => {
+                    renderizarSugestoes(response.data);
+                    atualizarPaginaAtual("Listar Todas Sugestões");
+                })
+                .catch(() => showToast('Erro', 'Não foi possível carregar as sugestões.', 'error'));
+        }
+
+        function listarTop3() {
+            axios.get(`${apiUrl}/top3`)
+                .then(response => {
+                    renderizarSugestoes(response.data);
+                    atualizarPaginaAtual("Top 3 Mais Curtidas");
+                })
+                .catch(() => showToast('Erro', 'Não foi possível carregar as sugestões.', 'error'));
+        }
+
+        function atualizarSugestoes() {
+            const shouldListTop3 = document.getElementById('sugestoes').children.length === 3;
+            if (shouldListTop3) {
+                listarTop3();
+            } else {
+                listarSugestoes(); 
+            }
+        }
+
+        document.getElementById('formCadastrarSugestao').onsubmit = function(event) {
+            event.preventDefault();
+            const descricao = document.getElementById('descricao').value;
+            const categoria = document.getElementById('categoria').value;
+            const usuarioId = document.getElementById('usuarioId').value;
+
+            axios.post(apiUrl, { descricao, categoria, usuarioId })
+                .then(() => {
+                    atualizarSugestoes();
+
+                    showToast('Sucesso', 'Sugestão cadastrada com sucesso!', 'success');
+                    document.getElementById('modalCadastrar').querySelector('.btn-close').click();
+                })
+                .catch(() => showToast('Erro', 'Não foi possível cadastrar a sugestão.', 'error'));
+        };
+
+        function abrirModalCurtir(sugestaoId) {
+            document.getElementById('sugestaoIdCurtir').value = sugestaoId;
+            new bootstrap.Modal(document.getElementById('modalCurtir')).show();
+        }
+
+        document.getElementById('formCurtirSugestao').onsubmit = function(event) {
+            event.preventDefault();
+            const sugestaoId = document.getElementById('sugestaoIdCurtir').value;
+            const usuarioId = document.getElementById('usuarioIdCurtir').value;
+
+            axios.put(`${apiUrl}/${sugestaoId}/curtir?usuarioId=${usuarioId}`)
+                .then(() => {
+                    atualizarSugestoes();
+                    showToast('Sucesso', 'Sugestão curtida com sucesso!', 'success');
+                    new bootstrap.Modal(document.getElementById('modalCurtir')).hide();
+                })
+                .catch(() => showToast('Erro', 'Não foi possível curtir a sugestão.', 'error'));
+        };
+
+        function abrirModalConfirmarApagar(sugestaoId) {
+            const btnConfirmarApagar = document.getElementById('btnConfirmarApagar');
+            btnConfirmarApagar.onclick = function () {
+                deletarSugestao(sugestaoId);
+            };
+            new bootstrap.Modal(document.getElementById('modalConfirmarApagar')).show();
+        }
+
+        function deletarSugestao(sugestaoId) {
+            axios.delete(`${apiUrl}/${sugestaoId}`)
+                .then(() => {
+                    atualizarSugestoes();
+                    showToast('Sucesso', 'Sugestão apagada com sucesso!', 'success');
+                })
+                .catch(() => showToast('Erro', 'Não foi possível apagar a sugestão.', 'error'));
+        }
+
+        listarSugestoes();
+    </script>
+</body>
+</html>
