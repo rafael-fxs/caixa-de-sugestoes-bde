@@ -14,7 +14,6 @@ public interface SugestaoRepository extends JpaRepository<Sugestao, Long> {
     @Query(value = "SELECT * FROM sugestao ORDER BY 1 DESC", nativeQuery = true)
     List<Sugestao> listarTodas();
 
-
     @Modifying
     @Query(value = "INSERT INTO sugestao (descricao, categoria, usuario_id) VALUES (:descricao, :categoria, :usuarioId)", nativeQuery = true)
     void enviarSugestao(@Param("descricao") String descricao, @Param("categoria") String categoria, @Param("usuarioId") Long usuarioId);
