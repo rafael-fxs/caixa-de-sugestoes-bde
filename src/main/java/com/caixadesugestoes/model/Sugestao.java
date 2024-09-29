@@ -40,14 +40,6 @@ public class Sugestao {
         this.usuario = usuario;
     }
 
-    public void curtirOuDescurtir(Usuario usuario) {
-        if (curtidas.contains(usuario)) {
-            curtidas.remove(usuario);
-        } else {
-            curtidas.add(usuario);
-        }
-    }
-
     public int getTotalCurtidas() {
         return curtidas.size();
     }

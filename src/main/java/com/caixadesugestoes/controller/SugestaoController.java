@@ -34,8 +34,7 @@ public class SugestaoController {
 
     @PutMapping("/{id}/curtir")
     public ResponseEntity<Void> curtirSugestao(@PathVariable Long id, @RequestParam Long usuarioId) {
-        Usuario usuario = usuarioService.buscarPorId(usuarioId);
-        sugestaoService.curtirOuDescurtirSugestao(id, usuario);
+        sugestaoService.curtirOuDescurtirSugestao(id, usuarioId);
         return ResponseEntity.ok().build();
     }
 
